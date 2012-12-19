@@ -260,6 +260,9 @@ void step(List *clist, int c, List *nlist, int len, int elem, int iFlag)
 				}
 			}
 		}
+		else if (s->c == Match) {
+			addstate(nlist, s);
+		}
 		else {
 			if (iFlag == 0) {
 				if ((s->c == c) || (s->c == Any))

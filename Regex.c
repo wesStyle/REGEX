@@ -8,7 +8,7 @@ char** fromArr();
 
 
 int i = 0;
-int iFlag = 1;
+int iFlag = 0;
 char *post;
 int count;
 
@@ -23,11 +23,15 @@ int main(int argCount, char** argStrings)
 	char** stringsArr;
 	State *start;
 
-	if (argCount != 1) {
+	if (argCount > 2) {
 		fromArgs(argCount, argStrings);
-		stringsArr == argStrings;
+		stringsArr = argStrings;
+		//printf("\niFlag = %i\npost = %s\ni = %i\ncount = %i\nstr[i] = %s", iFlag, post, i, count, argStrings[i]);
 	}
-	else stringsArr = fromArr();
+	else {
+		if ((argCount == 2) && !strcmp(argStrings[1], "-i")) iFlag = 1;
+		stringsArr = fromArr();
+	}
 
 	//printf("\niFlag = %i\npost = %s\ni = %i\ncount = %i\nstr[i] = %s", iFlag, post, i, count, argStrings[i]);
 	
@@ -37,16 +41,18 @@ int main(int argCount, char** argStrings)
 		return 1;
 	}
 	
+	//printf("\njui1");
 	start = post2nfa(post);
 	if(start == NULL){
 		fprintf(stderr, "error in post2nfa %s\n", post);
-		if (argCount == 1) getch();
+		if (!strcmp(argStrings[1], "-i")) ;
 		return 1;
 	}
-
+	//printf("\njui2");
 	l1.s = (State**)malloc(nstate*sizeof l1.s[0]);
 	l2.s = (State**)malloc(nstate*sizeof l2.s[0]);
 	for(i ; i < count; i++)
+		//printf("\ni = %i\ncount = %i", i, count);
 		if (match(start, stringsArr[i], iFlag))
 			printf("\n%s", stringsArr[i]);
 	if (argCount == 1) getch();
@@ -55,11 +61,6 @@ int main(int argCount, char** argStrings)
 
 
 void fromArgs(int argCount, char** argStrings) {
-	if (argCount <= 2) {
-		printf("arguments error"); 
-		exit;
-	}
-
 	if (!strcmp(argStrings[1], "-i")) {
 		iFlag = 1;
 		post = re2post(argStrings[2]);

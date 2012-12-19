@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "nfabuilder.h"
 #include "nfafragment.h"
@@ -290,7 +291,6 @@ int match(State *start, char *s, int iFlag)
 		
 		elem++;
 		c = *s & 0xFF;
-
 		if (clist -> n == 0) {
 			clist = startlist(start, &l1);
 			nlist = &l2;

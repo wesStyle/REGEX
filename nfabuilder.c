@@ -4,18 +4,14 @@
 #include "ptrlist.h"
 
 /*
- * Convert infix regexp re to postfix notation.
- * Insert . as explicit concatenation operator.
- * Cheesy parser, return static buffer.
+ * Перевод регулярного выражения в постфиксный вид, используя символ "'" как оператор конкатенации
  */
-int anchorStart = 0;
-int anchorEnd = 0;
-
 char* re2post(char *re)
 {
 	int nalt, natom;
 	static char buf[8000];
 	char *dst;
+
 	struct {
 		int nalt;
 		int natom;
@@ -25,16 +21,18 @@ char* re2post(char *re)
 	dst = buf;
 	nalt = 0;
 	natom = 0;
-	if(strlen(re) >= sizeof buf/2)
+
+	if (strlen(re) >= sizeof buf/2)
 		return NULL;
-	for(; *re; re++){
-		switch(*re){
+	for (; *re; re++) {
+
+		switch (*re) {
 		case '(':
-			if(natom > 1){
+			if (natom > 1) {
 				--natom;
 				*dst++ = '`';
 			}
-			if(p >= paren+100)
+			if (p >= paren+100)
 				return NULL;
 			p->nalt = nalt;
 			p->natom = natom;
@@ -43,20 +41,20 @@ char* re2post(char *re)
 			natom = 0;
 			break;
 		case '|':
-			if(natom == 0)
+			if (natom == 0)
 				return NULL;
-			while(--natom > 0)
+			while (--natom > 0)
 				*dst++ = '`';
 			nalt++;
 			break;
 		case ')':
-			if(p == paren)
+			if (p == paren)
 				return NULL;
-			if(natom == 0)
+			if (natom == 0)
 				return NULL;
-			while(--natom > 0)
+			while (--natom > 0)
 				*dst++ = '`';
-			for(; nalt > 0; nalt--)
+			for (; nalt > 0; nalt--)
 				*dst++ = '|';
 			--p;
 			nalt = p->nalt;
@@ -66,12 +64,12 @@ char* re2post(char *re)
 		case '*':
 		case '+':
 		case '?':
-			if(natom == 0)
+			if (natom == 0)
 				return NULL;
 			*dst++ = *re;
 			break;
 		default:
-			if(natom > 1){
+			if (natom > 1) {
 				--natom;
 				*dst++ = '`';
 			}
@@ -80,81 +78,77 @@ char* re2post(char *re)
 			break;
 		}
 	}
-	if(p != paren)
+	if (p != paren)
 		return NULL;
-	while(--natom > 0)
+	while (--natom > 0)
 		*dst++ = '`';
-	for(; nalt > 0; nalt--)
+	for (; nalt > 0; nalt--)
 		*dst++ = '|';
 	*dst = 0;
 	return buf;
 }
 
 /*
- * Convert postfix regular expression to NFA.
- * Return start state.
+ * Построение Недетерминированного Конечного Автомата по ругулярному выражению в постфиксном виде
+ * Функция возвращает начальное состояние автомата
  */
 State* post2nfa(char *postfix)
 {
 	char *p;
 	Frag stack[1000], *stackp, e1, e2, e;
 	State *s;
-	
-	// fprintf(stderr, "postfix: %s\n", postfix);
 
-	if(postfix == NULL)
+	if (postfix == NULL)
 		return NULL;
 
 	#define push(s) *stackp++ = s
 	#define pop() *--stackp
 
 	stackp = stack;
-	for(p=postfix; *p; p++){
+	for (p=postfix; *p; p++) {
 		switch(*p){
 		default:
 			s = state(*p, NULL, NULL);
 			push(frag(s, list1(&s->out)));
 			break;
-		case '`':	/* catenate */
+		case '`':	/* Конкатенация */
 			e2 = pop();
 			e1 = pop();
 			patch(e1.out, e2.start);
 			push(frag(e1.start, e2.out));
 			break;
-		case '|':	/* alternate */
+		case '|':	/* ИЛИ */
 			e2 = pop();
 			e1 = pop();
 			s = state(Split, e1.start, e2.start);
 			push(frag(s, append(e1.out, e2.out)));
 			break;
-		case '?':	/* zero or one */
+		case '?':	/* один или ноль */
 			e = pop();
 			s = state(Split, e.start, NULL);
 			push(frag(s, append(e.out, list1(&s->out1))));
 			break;
-		case '*':	/* zero or more */
+		case '*':	/* больше нуля */
 			e = pop();
 			s = state(Split, e.start, NULL);
 			patch(e.out, s);
 			push(frag(s, list1(&s->out1)));
 			break;
-		case '+':	/* one or more */
+		case '+':	/* один или более */
 			e = pop();
 			s = state(Split, e.start, NULL);
 			patch(e.out, s);
 			push(frag(e.start, list1(&s->out1)));
 			break;
-		case '^': /* любой символ, кроме \n*/
-			anchorStart = 1;
+		case '^': /* Начало строки */
 			s = state(StartAnchor, NULL, NULL);
 			push(frag(s, list1(&s->out)));
 			break;
-		case '$': /* любой символ, кроме \n*/
-			anchorEnd = 1;
+		case '$': /* Конец строки */
 			s = state(EndAnchor, NULL, NULL);
 			push(frag(s, list1(&s->out)));
 			break;
-		case '.': /* любой символ, кроме \n*/
+		case '.': /* любой символ */
 			s = state(Any, NULL, NULL);
 			push(frag(s, list1(&s->out)));
 			break;
@@ -162,7 +156,7 @@ State* post2nfa(char *postfix)
 	}
 
 	e = pop();
-	if(stackp != stack)
+	if (stackp != stack)
 		return NULL;
 
 	patch(e.out, &matchstate);
@@ -171,7 +165,7 @@ State* post2nfa(char *postfix)
 #undef push
 }
 
-/* Compute initial state list */
+/* Создание начального листа состояний NFA */
 List* startlist(State *start, List *l)
 {
 	l->n = 0;
@@ -180,79 +174,109 @@ List* startlist(State *start, List *l)
 	return l;
 }
 
-/* Check whether state list contains a match. */
+/* Проверка, соответствует ли текущий лист состояний сходству */
 int ismatch(List *l)
 {
 	int i;
 
-	for(i=0; i<l->n; i++)
-		if(l->s[i] == &matchstate)
+	for (i=0; i < l->n; i++)
+		if (l->s[i] == &matchstate)
 			return 1;
 	return 0;
 }
 
-/* Add s to l, following unlabeled arrows. */
+/* Добавление состояния s в лист l, следуя безусловным переходам */
 void addstate(List *l, State *s)
 {
-	if(s == NULL || s->lastlist == listid)
+	if (s == NULL || s->lastlist == listid)
 		return;
 	s->lastlist = listid;
-	if(s->c == Split){
-		/* follow unlabeled arrows */
+
+	if (s->c == Split) {
+		/* следование безусловным переходам */
 		addstate(l, s->out);
 		addstate(l, s->out1);
 		return;
 	}
+
 	l->s[l->n++] = s;
 }
 
 /*
- * Step the NFA from the states in clist
- * past the character c,
- * to create next NFA state set nlist.
+ * Шаг NFA по листу состояний и создания листа следующих состояний NFA
  */
-void step(List *clist, int c, List *nlist, int len, int elem)
+void step(List *clist, int c, List *nlist, int len, int elem, int iFlag)
 {
 	int i;
 	State *s;
-
+	char tmp1, tmp2;
+	int tmp = -1;
 	listid++;
 	nlist->n = 0;
-	for(i=0; i < (clist->n); i++){
+	for (i=0; i < (clist->n); i++){
 		s = clist->s[i];
 		if (s->c == StartAnchor) {
 			if (elem == 1) {
 				addstate(nlist, s->out);
 				s = nlist->s[nlist->n -1];
 				nlist->n--;
-				if((s->c == c) || (s->c == Any))
-				{
-					addstate(nlist, s->out);
+				if (iFlag == 0) {
+					if ((s->c == c) || (s->c == Any))
+					{
+						addstate(nlist, s->out);
+					}
 				}
-			}
-		}
-			else if (elem == len) 
-			{
-				if ((s->c == c) || (s->c == Any))
-				{
-					addstate(nlist, s->out);
-					s = nlist->s[i];
-					nlist->n--;
-					if (s->c == EndAnchor) {
+				else if (iFlag == 1) {
+					tmp1 = s->c;
+					tmp2 = c;
+					if ((s->c == Any) || (strnicmp(&tmp1, &tmp2, 1) == 0)) {
 						addstate(nlist, s->out);
 					}
 				}
 			}
-			else 
-				{
-					if ((s->c == c) || (s->c == Any))
+		}
+		else if (elem == len) {
+			if (iFlag == 0) {
+				if ((s->c == c) || (s->c == Any)) {
+					addstate(nlist, s->out);
+					s = nlist->s[i];
+					nlist->n--;
+					if (s->c == EndAnchor) {
+					addstate(nlist, s->out);
+					}
+				}
+			}
+			else if (iFlag == 1) {
+				tmp1 = s->c;
+				tmp2 = c;
+				if ((s->c == Any) || (strnicmp(&tmp1, &tmp2, 1) == 0)) {
+					addstate(nlist, s->out);
+					s = nlist->s[i];
+					nlist->n--;
+					if (s->c == EndAnchor) {
+					addstate(nlist, s->out);
+					}
+				}
+			}
+		}
+		else {
+			if (iFlag == 0) {
+				if ((s->c == c) || (s->c == Any))
+				addstate(nlist, s->out);
+			}
+			else if (iFlag == 1) {
+				tmp1 = s->c;
+				tmp2 = c;
+				if ((s->c == Any) || (strnicmp(&tmp1, &tmp2, 1) == 0)) {
 					addstate(nlist, s->out);
 				}
+			}
+		}
 	}
 }
 
-/* Run NFA to determine whether it matches s. */
-int match(State *start, char *s)
+/* Запуск NFA и проверка на совпадение строки */
+int match(State *start, char *s, int iFlag)
 {
 	int i, c;
 	List *clist, *nlist, *t;
@@ -262,7 +286,7 @@ int match(State *start, char *s)
 	clist = startlist(start, &l1);
 	nlist = &l2;
 
-	for(; *s; s++){
+	for (; *s; s++) {
 		
 		elem++;
 		c = *s & 0xFF;
@@ -272,8 +296,8 @@ int match(State *start, char *s)
 			nlist = &l2;
 		}
 
-		step(clist, c, nlist, len, elem);
-		t = clist; clist = nlist; nlist = t;	/* swap clist, nlist */
+		step(clist, c, nlist, len, elem, iFlag);
+		t = clist; clist = nlist; nlist = t;	/* смена листов текущих и следующих состояний местами */
 
 		if (ismatch(clist)) return 1;
 	}

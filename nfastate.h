@@ -22,7 +22,7 @@ enum
 
 int nstate;
 
-State* state(int c, State *out, State *out1);
+State* state(int, State*, State*);
 
 State matchstate;
 #endif

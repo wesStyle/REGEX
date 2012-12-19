@@ -2,17 +2,17 @@
 #include "nfastate.h"
 
 /*
- * Represents an NFA state plus zero or one or two arrows exiting.
- * if c == Match, no arrows out; matching state.
- * If c == Split, unlabeled arrows to out and out1 (if != NULL).
- * If c < 256, labeled arrow with character c to out.
+ * —труктура, представл€юща€ собой состо€ние NFA
+ * ≈сли c == совпадение, то это конечное состо€ние.
+ * ≈сли c == Split, то безусловные переходы в out и out1.
+ * ≈сли c < 256, условные переходы с со значением c на выходе.
  */
 
 
 
 State matchstate = { Match };	/* matching state */
 
-/* Allocate and initialize State */
+/* »нициализаци€ состо€ни€ */
 State* state(int c, State *out, State *out1)
 {
 	State *s;

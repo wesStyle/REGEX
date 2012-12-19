@@ -3,10 +3,7 @@
 #include "nfastate.h"
 
 /*
- * A partially built NFA without the matching state filled in.
- * Frag.start points at the start state.
- * Frag.out is a list of places that need to be set to the
- * next state for this fragment.
+ * Фрагмент NFA, где * start - начальное состояние фрагмента, а *out - список следующих возможных состояний
  */
 
 typedef struct Frag Frag;
@@ -18,8 +15,7 @@ struct Frag
 	Ptrlist *out;
 };
 
-/* Initialize Frag struct. */
+/* Инициализация структуры */
 Frag frag(State* , Ptrlist*);
-
 
 #endif

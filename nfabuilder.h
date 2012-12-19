@@ -16,10 +16,8 @@ static int listid;
 void addstate(List*, State*);
 void step(List*, int, List*);
 
-/* Compute initial state list */
 List* startlist(State*, List*);
 
-/* Check whether state list contains a match. */
 int ismatch(List *);
 
-int match(State*, char*);
+int match(State*, char*, int);
